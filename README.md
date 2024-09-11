@@ -45,6 +45,7 @@ milo.run();
 
 ## **TODO**
 
+- [ ] Image Optimization
 - [ ] Impl Middleware
 - [ ] In-memory cache routes
 - [ ] Impl WebSockets
