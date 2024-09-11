@@ -1,6 +1,6 @@
 # Milo
 
-## Basic usage
+**Basic usage**
 
 Given a project with the following folder structure:
 
@@ -26,7 +26,7 @@ export default (req: Request) => {
 };
 ```
 
-Initialize a server by calling `fsRouter`:
+Initialize a server by calling `Milo`:
 
 ```typescript
 // my-milo-app/app.ts
