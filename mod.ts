@@ -11,12 +11,24 @@ interface Route {
   handler: Handler;
 }
 
-async function createRoutes(path: string, basePath = ""): Promise<Route[]> {
+type WsMap = Map<
+  string,
+  (socket?: WebSocket, event?: MessageEvent<string>) => void
+>;
+
+async function createRoutes(
+  path: string,
+  basePath = "",
+): Promise<[Route[], WsMap]> {
   let res: Route[] = [];
+  const wsll: WsMap = new Map<
+    string,
+    (socket?: WebSocket, event?: MessageEvent<string>) => void
+  >();
 
   for await (const dirEntry of Deno.readDir(path)) {
     if (dirEntry.isDirectory) {
-      const nestedRoutes = await createRoutes(
+      const [nestedRoutes, _] = await createRoutes(
         Path.join(path, dirEntry.name),
         Path.parse(Path.join(path, dirEntry.name)).name,
       );
@@ -26,7 +38,7 @@ async function createRoutes(path: string, basePath = ""): Promise<Route[]> {
       const module = await import(modulePath);
 
       if (module.default && typeof module.default === "function") {
-        let routePath: string;
+        let routePath: string = "";
         const regex = /\[(\w+)\]\.(ts|js)$/;
         const paramMatch = dirEntry.name.match(regex);
 
@@ -52,6 +64,10 @@ async function createRoutes(path: string, basePath = ""): Promise<Route[]> {
           method: "GET",
           handler: module.default,
         });
+      } else if (dirEntry.name === "+ws.ts") {
+        for (const evt of Object.keys(module)) {
+          wsll.set(evt, module[evt]);
+        }
       } else {
         console.error(
           `No default export or not a function in module: ${modulePath}`,
@@ -60,11 +76,12 @@ async function createRoutes(path: string, basePath = ""): Promise<Route[]> {
     }
   }
 
-  return res;
+  return [res, wsll];
 }
 
 function route(
   routes: Route[],
+  wsall: WsMap,
   defaultHandler: (
     request: Request,
     info?: Deno.ServeHandlerInfo,
@@ -74,6 +91,21 @@ function route(
   info?: Deno.ServeHandlerInfo,
 ) => Response | Promise<Response> {
   return (request: Request, info?: Deno.ServeHandlerInfo) => {
+    if (request.headers.get("upgrade") == "websocket") {
+      const { socket, response } = Deno.upgradeWebSocket(request);
+      wsall.forEach((val, key) => {
+          socket.addEventListener(key, (event) => {
+            if (event instanceof MessageEvent) {
+              val(socket, event);
+            } else {
+              val(socket)
+            }
+        });
+      });
+
+      return response
+    }
+
     for (const route of routes) {
       const params = route.pattern.exec(request.url);
       if (params && request.method === (route.method ?? "GET")) {
@@ -98,10 +130,10 @@ export class Milo {
   }
 
   async run(): Promise<void> {
-    const Routes = await createRoutes(this.options.fsRouteDir);
+    const [Routes, Ws] = await createRoutes(this.options.fsRouteDir);
     Deno.serve(
       { port: this.options.port, hostname: this.options.hostname },
-      route(Routes, () => new Response("404 not found")),
+      route(Routes, Ws, () => new Response("404 not found")),
     );
   }
 }

@@ -48,4 +48,4 @@ milo.run();
 - [ ] Image Optimization
 - [ ] Impl Middleware
 - [ ] In-memory cache routes
-- [ ] Impl WebSockets
+- [X] Impl WebSockets
