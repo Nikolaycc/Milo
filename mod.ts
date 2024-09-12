@@ -42,7 +42,7 @@ async function createRoutes(
     if (dirEntry.isDirectory) {
       const [nestedRoutes, _] = await createRoutes(
         Path.join(path, dirEntry.name),
-        Path.parse(Path.join(path, dirEntry.name)).name,
+        Path.join(basePath, Path.parse(Path.join(path, dirEntry.name)).name),
       );
       res = res.concat(nestedRoutes);
     } else {
@@ -126,12 +126,33 @@ function route(
       return response
     }
 
+    let res: Array<[Route, Record<string, string | undefined>]> = [];
     for (const route of routes) {
       const params = route.pattern.exec(request.url);
       if (params && request.method === (route.method ?? "GET")) {
-        return route.handler(request, params.pathname.groups);
+        res.push([route, params.pathname.groups])
       }
     }
+
+    if (res.length > 0) {
+      const base = Path.parse(request.url).base
+      let ret: [Route, Record<string, string | undefined>] | null = null;
+      for (const rp of res) {
+        const [r, _] = rp;
+        if (Path.parse(r.pattern.pathname).base == base) {
+          ret = rp
+        }
+      }
+
+      if (ret != null) {
+        const [ro, params] = ret;
+        return ro.handler(request, params);
+      } else {
+        const [a, b] = res[0];
+        return a.handler(request, b);
+      }
+    }
+
     return defaultHandler(request, info);
   };
 }
