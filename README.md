@@ -1,6 +1,6 @@
 # Milo
 
-Milo is a lightweight, file-based routing framework built for Deno. It simplifies the creation of HTTP and WebSocket routes by dynamically generating them from a directory structure. Milo enables effortless route organization through a file system-based approach, making it easy to develop scalable and modular applications.
+Milo is a lightweight, file-based HTTP framework built for Deno. It simplifies the creation of HTTP and WebSocket routes by dynamically generating them from a directory structure. Milo enables effortless route organization through a file system-based approach, making it easy to develop scalable and modular applications.
 
 > [!WARNING]
 > This framework is unfinished. Keep your expectations low.
