@@ -16,6 +16,18 @@ type WsMap = Map<
   (socket?: WebSocket, event?: MessageEvent<string>) => void
 >;
 
+/**
+ * Recursively creates HTTP and WebSocket routes from a given directory.
+ *
+ * @param path - The root directory to scan for route modules.
+ * @param basePath - An optional base path for nested routes.
+ * @returns A tuple containing an array of routes and a WebSocket map.
+ *
+ * @example
+ * ```ts
+ * const [routes, wsMap] = await createRoutes("./routes");
+ * ```
+ */
 async function createRoutes(
   path: string,
   basePath = "",
@@ -79,6 +91,14 @@ async function createRoutes(
   return [res, wsll];
 }
 
+/**
+ * Creates a request handler to match HTTP routes and WebSocket events.
+ *
+ * @param routes - The array of HTTP routes to handle.
+ * @param wsall - The map of WebSocket events and handlers.
+ * @param defaultHandler - The default handler to use for unmatched requests.
+ * @returns A function to handle HTTP and WebSocket requests.
+ */
 function route(
   routes: Route[],
   wsall: WsMap,
@@ -122,13 +142,30 @@ type MiloOptions = {
   fsRouteDir: string;
 };
 
+/**
+ * The main class for the Milo framework. Handles routing and WebSocket integration.
+ */
 export class Milo {
   options: MiloOptions;
 
+  /**
+   * Constructs a new instance of Milo.
+   *
+   * @param options - The configuration options for Milo, such as port, hostname, and the file system route directory.
+   */
   constructor(options: Partial<MiloOptions> = {}) {
     this.options = options as MiloOptions;
   }
 
+  /**
+   * Starts the server and serves the routes and WebSocket connections.
+   *
+   * @example
+   * ```ts
+   * const milo = new Milo({ port: 8000, fsRouteDir: "./routes" });
+   * await milo.run();
+   * ```
+   */
   async run(): Promise<void> {
     const [Routes, Ws] = await createRoutes(this.options.fsRouteDir);
     Deno.serve(
