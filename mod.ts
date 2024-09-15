@@ -2,7 +2,7 @@ import * as Path from "@std/path";
 import { LruCache } from "@std/cache";
 import Logger from "@deno-lib/logger";
 
-export const logger = new Logger();
+const logger: Logger = new Logger();
 
 const routeCache = new LruCache<
   [string, string],
