@@ -1,4 +1,13 @@
 import * as Path from "@std/path";
+import { LruCache } from "@std/cache";
+import Logger from "@deno-lib/logger";
+
+export const logger = new Logger();
+
+const routeCache = new LruCache<
+  [string, string],
+  [Route, Record<string, string | undefined>]
+>(1000); // Cache size: 1000
 
 type Handler = (
   request: Request,
@@ -49,7 +58,11 @@ async function createRoutes(
       const modulePath = Path.join(path, dirEntry.name);
       const module = await import(modulePath);
 
-      if (module.default && typeof module.default === "function") {
+      const MethodType = ["GET", "POST", "PUT", "DELETE", "PATCH"] as const;
+      if (
+        (module.default && typeof module.default === "function") ||
+        MethodType.some((method) => method in module)
+      ) {
         let routePath: string = "";
         const regex = /\[(\w+)\]\.(ts|js)$/;
         const paramMatch = dirEntry.name.match(regex);
@@ -69,19 +82,30 @@ async function createRoutes(
         // Clean up double slashes in the route path
         routePath = routePath.replace(/\/+/g, "/");
 
-        res.push({
-          pattern: new URLPattern({
-            pathname: routePath,
-          }),
-          method: "GET",
-          handler: module.default,
-        });
+        for (const method of [
+          "GET",
+          "POST",
+          "PUT",
+          "DELETE",
+          "PATCH",
+          "default",
+        ]) {
+          if (method in module) {
+            res.push({
+              pattern: new URLPattern({
+                pathname: routePath,
+              }),
+              method: method === "default" ? "GET" : method,
+              handler: module[method],
+            });
+          }
+        }
       } else if (dirEntry.name === "+ws.ts") {
         for (const evt of Object.keys(module)) {
           wsll.set(evt, module[evt]);
         }
       } else {
-        console.error(
+        logger.error(
           `No default export or not a function in module: ${modulePath}`,
         );
       }
@@ -111,48 +135,61 @@ function route(
   info?: Deno.ServeHandlerInfo,
 ) => Response | Promise<Response> {
   return (request: Request, info?: Deno.ServeHandlerInfo) => {
-    if (request.headers.get("upgrade") == "websocket") {
+    const url = request.url;
+    logger.info(`${request.method} ${url}`);
+
+    // WebSocket handling (remains the same)
+    if (request.headers.get("upgrade") === "websocket") {
       const { socket, response } = Deno.upgradeWebSocket(request);
       wsall.forEach((val, key) => {
-          socket.addEventListener(key, (event) => {
-            if (event instanceof MessageEvent) {
-              val(socket, event);
-            } else {
-              val(socket)
-            }
+        socket.addEventListener(key, (event) => {
+          if (event instanceof MessageEvent) {
+            val(socket, event);
+          } else {
+            val(socket);
+          }
         });
       });
 
-      return response
+      return response;
     }
 
-    let res: Array<[Route, Record<string, string | undefined>]> = [];
+    // Check if route is cached
+    if (routeCache.has([url, request.method])) {
+      const [cachedRoute, params] = routeCache.get([url, request.method])!;
+      return cachedRoute.handler(request, params);
+    }
+
+    // If not cached, match the routes and cache the result
+    const matchedRoutes: Array<[Route, Record<string, string | undefined>]> =
+      [];
     for (const route of routes) {
-      const params = route.pattern.exec(request.url);
+      const params = route.pattern.exec(url);
       if (params && request.method === (route.method ?? "GET")) {
-        res.push([route, params.pathname.groups])
+        matchedRoutes.push([route, params.pathname.groups]);
       }
     }
 
-    if (res.length > 0) {
-      const base = Path.parse(request.url).base
-      let ret: [Route, Record<string, string | undefined>] | null = null;
-      for (const rp of res) {
-        const [r, _] = rp;
-        if (Path.parse(r.pattern.pathname).base == base) {
-          ret = rp
+    if (matchedRoutes.length > 0) {
+      const base = Path.parse(request.url).base;
+      let bestMatch: [Route, Record<string, string | undefined>] | null = null;
+
+      for (const match of matchedRoutes) {
+        const [r] = match;
+        if (Path.parse(r.pattern.pathname).base === base) {
+          bestMatch = match;
         }
       }
 
-      if (ret != null) {
-        const [ro, params] = ret;
-        return ro.handler(request, params);
-      } else {
-        const [a, b] = res[0];
-        return a.handler(request, b);
-      }
+      const [routeToUse, params] = bestMatch ?? matchedRoutes[0];
+
+      // Cache the matched route for future requests
+      routeCache.set([url, request.method], [routeToUse, params]);
+
+      return routeToUse.handler(request, params);
     }
 
+    // Return default handler if no route matches
     return defaultHandler(request, info);
   };
 }

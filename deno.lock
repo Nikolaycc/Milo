@@ -2,20 +2,40 @@
   "version": "3",
   "packages": {
     "specifiers": {
+      "jsr:@deno-lib/logger@^1.1.6": "jsr:@deno-lib/logger@1.1.6",
       "jsr:@std/assert@1": "jsr:@std/assert@1.0.4",
+      "jsr:@std/cache@0.1.2": "jsr:@std/cache@0.1.2",
+      "jsr:@std/fmt@0.225.1": "jsr:@std/fmt@0.225.1",
       "jsr:@std/internal@^1.0.3": "jsr:@std/internal@1.0.3",
+      "jsr:@std/io@0.224.0": "jsr:@std/io@0.224.0",
       "jsr:@std/path": "jsr:@std/path@1.0.4",
       "jsr:@std/path@^1.0.4": "jsr:@std/path@1.0.4"
     },
     "jsr": {
+      "@deno-lib/logger@1.1.6": {
+        "integrity": "dccd5927c97cb2ae450f49c6d82ba7d2fab11c6ce131ff4aae0a93e35267de17",
+        "dependencies": [
+          "jsr:@std/fmt@0.225.1",
+          "jsr:@std/io@0.224.0"
+        ]
+      },
       "@std/assert@1.0.4": {
         "integrity": "d4c767ea578e5bc09c15b6e503376003e5b2d1f4c0cdf08524a92101ff4d7b96",
         "dependencies": [
           "jsr:@std/internal@^1.0.3"
         ]
       },
+      "@std/cache@0.1.2": {
+        "integrity": "ab2aa818ff59c6a6c251e61ca9942c1796852b56ee2010ef31502202b34ef824"
+      },
+      "@std/fmt@0.225.1": {
+        "integrity": "44a8cb375d7344adb3cb0208b85ea0bde7cdc15224c11188c85e733834ffe356"
+      },
       "@std/internal@1.0.3": {
         "integrity": "208e9b94a3d5649bd880e9ca38b885ab7651ab5b5303a56ed25de4755fb7b11e"
+      },
+      "@std/io@0.224.0": {
+        "integrity": "0aff885d21d829c050b8a08b1d71b54aed5841aecf227f8d77e99ec529a11e8e"
       },
       "@std/path@1.0.4": {
         "integrity": "48dd5d8389bcfcd619338a01bdf862cb7799933390146a54ae59356a0acc7105"
@@ -107,7 +127,9 @@
   },
   "workspace": {
     "dependencies": [
+      "jsr:@deno-lib/logger@^1.1.6",
       "jsr:@std/assert@1",
+      "jsr:@std/cache@0.1.2",
       "jsr:@std/path@^1.0.4"
     ]
   }

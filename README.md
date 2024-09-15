@@ -32,12 +32,33 @@ export default (req: Request) => {
 };
 ```
 
+## HTTP Method Support
+Milo now supports defining handlers for multiple HTTP methods in your route modules. You can export functions corresponding to HTTP methods like GET, POST, PUT, DELETE, etc., from each module to handle specific requests.
+
+**Example Route Module** (`routes/example.ts`):
+```ts
+// Handle GET requests
+export function GET(request: Request) {
+  return new Response("GET request received");
+}
+
+// Handle POST requests
+export function POST(request: Request) {
+  return new Response("POST request received");
+}
+
+// Handle PUT requests
+export function PUT(request: Request) {
+  return new Response("PUT request received");
+}
+```
+
 Run the **Milo** server, and the WebSocket routes will be automatically handled:
 
 ```typescript
 // my-milo-app/app.ts
 import { Milo } from "@milo/core";
--- or --
+// -- or --
 import { Milo } from "jsr:@milo/core";
 
 const milo = new Milo({
